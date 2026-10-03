@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 import httpx2 as httpx
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 
 def serve(args: argparse.Namespace) -> None:
@@ -52,7 +52,7 @@ def call(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    load_dotenv()
+    load_dotenv(find_dotenv(usecwd=True))
     parser = argparse.ArgumentParser(prog="call_agent")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -64,7 +64,11 @@ def main() -> None:
     p_call = sub.add_parser("call", help="place a call (the server must be running)")
     p_call.add_argument("--to", required=True, help="number to call, e.g. +18005551234")
     p_call.add_argument("--task", required=True, help="path to a task file, or the task text itself")
-    p_call.add_argument("--server", default="http://127.0.0.1:8000")
+    p_call.add_argument(
+        "--server",
+        default=os.environ.get("CALL_AGENT_URL", "http://127.0.0.1:8000"),
+        help="where the server runs (default: $CALL_AGENT_URL or http://127.0.0.1:8000)",
+    )
     p_call.add_argument("--no-wait", action="store_true", help="don't wait for the call to finish")
     p_call.set_defaults(func=call)
 

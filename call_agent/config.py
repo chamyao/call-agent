@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 
 def _bool(value: str | None) -> bool:
@@ -36,7 +36,7 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    load_dotenv()
+    load_dotenv(find_dotenv(usecwd=True))
 
     def required(name: str) -> str:
         value = os.environ.get(name, "").strip()

@@ -138,6 +138,27 @@ def create_app(
         record.call_sid = call.sid
         return {"call_id": call_id, "call_sid": call.sid}
 
+    @app.get("/health")
+    async def health():
+        return {"ok": True}
+
+    @app.get("/calls")
+    async def list_calls(authorization: str | None = Header(default=None)):
+        require_token(authorization)
+        recent = sorted(calls.values(), key=lambda r: r.created_at, reverse=True)[:20]
+        return [
+            {
+                "call_id": r.call_id,
+                "to": r.to,
+                "created_at": r.created_at,
+                "status": r.status,
+                "outcome": r.outcome,
+                "finished": r.finalized,
+                "summary": r.summary,
+            }
+            for r in recent
+        ]
+
     @app.get("/calls/{call_id}")
     async def call_status(call_id: str, authorization: str | None = Header(default=None)):
         require_token(authorization)

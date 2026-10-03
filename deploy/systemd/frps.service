@@ -1,0 +1,14 @@
+[Unit]
+Description=frp server (tunnel endpoint for call-agent)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+DynamicUser=yes
+LoadCredential=frps.toml:/etc/frp/frps.toml
+ExecStart=/usr/local/bin/frps -c ${CREDENTIALS_DIRECTORY}/frps.toml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

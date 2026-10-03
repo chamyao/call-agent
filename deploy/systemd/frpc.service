@@ -1,0 +1,14 @@
+[Unit]
+Description=frp client (tunnels call-agent to the VPS)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+DynamicUser=yes
+LoadCredential=frpc.toml:/etc/frp/frpc.toml
+ExecStart=/usr/local/bin/frpc -c ${CREDENTIALS_DIRECTORY}/frpc.toml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
