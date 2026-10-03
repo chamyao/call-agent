@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import FastAPI, Header, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from twilio.request_validator import RequestValidator
+from twilio.base.exceptions import TwilioRestException
 from twilio.rest import Client as TwilioClient
 from twilio.twiml.voice_response import Connect, VoiceResponse
 
@@ -82,9 +83,9 @@ def create_app(
             return ""
 
     async def finalize(record: CallRecord) -> None:
-        if record.finalized:
+        if record.finalizing:
             return
-        record.finalized = True
+        record.finalizing = True
         transcript = "\n".join(f"{who}: {text}" for who, text in record.transcript)
         if transcript:
             try:
@@ -98,6 +99,7 @@ def create_app(
         else:
             record.summary = f"The call didn't connect (status: {record.status})."
         path = save_call(settings.calls_dir, record, transcript)
+        record.finalized = True
         log.info("Call %s finished: %s\n%s", record.call_id, path, record.summary)
         if settings.sms_summary and settings.owner_phone and record.summary:
             try:
@@ -129,17 +131,21 @@ def create_app(
         record = CallRecord(call_id=call_id, to=body.to, task=body.task)
         calls[call_id] = record
         base = settings.public_url
-        call = await asyncio.to_thread(
-            twilio.calls.create,
-            to=body.to,
-            from_=settings.twilio_from_number,
-            url=f"{base}/twiml?call_id={call_id}",
-            method="POST",
-            status_callback=f"{base}/status?call_id={call_id}",
-            status_callback_method="POST",
-            status_callback_event=["completed"],
-            time_limit=settings.max_call_seconds,
-        )
+        try:
+            call = await asyncio.to_thread(
+                twilio.calls.create,
+                to=body.to,
+                from_=settings.twilio_from_number,
+                url=f"{base}/twiml?call_id={call_id}",
+                method="POST",
+                status_callback=f"{base}/status?call_id={call_id}",
+                status_callback_method="POST",
+                status_callback_event=["completed"],
+                time_limit=settings.max_call_seconds,
+            )
+        except TwilioRestException as e:
+            calls.pop(call_id, None)
+            raise HTTPException(502, f"Twilio refused the call: {e.msg}") from None
         record.call_sid = call.sid
         return {"call_id": call_id, "call_sid": call.sid}
 

@@ -262,3 +262,16 @@ def test_rejects_unsigned_relay_websocket(tmp_path):
         ws.send_text(json.dumps({"type": "setup", "customParameters": {"call_id": "nope"}}))
         with pytest.raises(Exception):
             ws.receive_text()  # signed, but still closed for an unknown call
+
+
+def test_twilio_refusal_is_reported(tmp_path):
+    from twilio.base.exceptions import TwilioRestException
+
+    class RefusingTwilio(FakeTwilio):
+        def _create(self, **kwargs):
+            raise TwilioRestException(400, "https://api.twilio.com", msg="Account not authorized to call +12055550100")
+
+    client = TestClient(create_app(make_settings(tmp_path), brain=ScriptedBrain([]), twilio=RefusingTwilio()))
+    r = client.post("/calls", json={"to": "+12055550100", "task": "x"}, headers=AUTH)
+    assert r.status_code == 502
+    assert "not authorized" in r.json()["detail"]

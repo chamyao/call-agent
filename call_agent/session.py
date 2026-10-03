@@ -48,7 +48,8 @@ class CallRecord:
     outcome_reason: str | None = None
     transcript: list[tuple[str, str]] = field(default_factory=list)
     summary: str | None = None
-    finalized: bool = False
+    finalizing: bool = False  # summary being written; guards against running twice
+    finalized: bool = False  # summary and call log are done
 
 
 def _get(block: Any, key: str) -> Any:
