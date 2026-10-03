@@ -1,0 +1,9 @@
+.env
+profile.md
+calls/
+tasks/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
