@@ -112,6 +112,11 @@ def create_app(
 
     # --- API for placing calls ------------------------------------------------
 
+    @app.get("/health")
+    async def health():
+        return {"ok": True}
+
+
     @app.post("/calls")
     async def place_call(body: CallRequest, authorization: str | None = Header(default=None)):
         require_token(authorization)
@@ -192,6 +197,15 @@ def create_app(
 
     @app.websocket("/relay")
     async def relay(ws: WebSocket):
+        if settings.validate_twilio_signature:
+            # Twilio signs the WebSocket handshake with the wss:// URL from the TwiML.
+            url = settings.ws_url
+            if ws.url.query:
+                url += "?" + ws.url.query
+            signature = ws.headers.get("X-Twilio-Signature", "")
+            if not validator.validate(url, {}, signature):
+                await ws.close(code=1008)
+                return
         await ws.accept()
         setup = json.loads(await ws.receive_text())
         call_id = (setup.get("customParameters") or {}).get("call_id", "")

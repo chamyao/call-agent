@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-import httpx2 as httpx
+import httpx
 from dotenv import load_dotenv
 
 

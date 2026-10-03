@@ -28,7 +28,8 @@ class Settings:
     calls_dir: Path
     sms_summary: bool
     max_call_seconds: int
-    validate_twilio_signature: bool
+    # Always on in production; only tests turn it off.
+    validate_twilio_signature: bool = True
 
     @property
     def ws_url(self) -> str:
@@ -58,5 +59,4 @@ def load_settings() -> Settings:
         calls_dir=Path(os.environ.get("CALLS_DIR", "calls")),
         sms_summary=_bool(os.environ.get("SMS_SUMMARY")),
         max_call_seconds=int(os.environ.get("MAX_CALL_SECONDS", "5400")),
-        validate_twilio_signature=not _bool(os.environ.get("SKIP_TWILIO_SIGNATURE_CHECK")),
     )

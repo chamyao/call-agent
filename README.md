@@ -79,6 +79,58 @@ Writing good tasks: say what you want, what you'd accept as a fallback, and
 what it must not agree to. Put identifiers like account, order and tracking
 numbers either in the task or in `profile.md`.
 
+## Running it on db-east
+
+The bot runs on db-east as the restricted `phonebot` user, behind the existing
+nginx at `https://calls.ceruleantokyo.xyz` (proxied to `127.0.0.1:8010`). The
+server's admin manages `phonebot.service`; restarts go through them.
+
+1. Add to `~/.ssh/config`:
+
+   ```
+   Host east
+     HostName 178.156.172.174
+     User phonebot
+     IdentityFile ~/.ssh/east_ed25519
+     IdentitiesOnly yes
+     StrictHostKeyChecking ask
+   ```
+
+2. Set `PUBLIC_URL=https://calls.ceruleantokyo.xyz` in `.env`, then run `deploy/east/deploy.sh`. It copies the code, `.env` and `profile.md`, and builds the virtualenv.
+3. Logs: `ssh east journalctl -u phonebot -f`.
+
+Every Twilio request, including the `/relay` WebSocket handshake, must carry a
+valid `X-Twilio-Signature`; there is no setting to turn that off.
+
+## Running it through your own server (frp)
+
+Instead of ngrok, you can give the bot a permanent address using a VPS you
+control. The bot keeps running on your Mac; the VPS only forwards traffic.
+
+```
+Twilio ──HTTPS──▶ VPS: Caddy :443 ─▶ frps :8080 ◀── tunnel :7000 ── Mac: frpc ─▶ bot :8000
+```
+
+1. **DNS**: add an A record for a subdomain (e.g. `calls.yourdomain.com`) pointing at the VPS's IP.
+2. **VPS** (Debian/Ubuntu): copy the script over and run it with your domain and the `FRP_TOKEN` from `.env`:
+
+   ```sh
+   scp deploy/vps/setup.sh root@YOUR_VPS_IP:
+   ssh root@YOUR_VPS_IP 'bash setup.sh calls.yourdomain.com YOUR_FRP_TOKEN'
+   ```
+
+   This installs frps and Caddy (which gets the HTTPS certificate), starts both on boot, and opens ports 22, 80, 443 and 7000.
+3. **Mac**: set `PUBLIC_URL=https://calls.yourdomain.com` and `FRP_SERVER_ADDR` in `.env`, then:
+
+   ```sh
+   brew install frpc
+   deploy/mac/install.sh
+   ```
+
+   This runs the bot and the tunnel in the background at login, and checks that `https://calls.yourdomain.com/health` answers. Logs go to `~/Library/Logs/call-agent/`. Stop everything with `deploy/mac/install.sh --uninstall`.
+
+The Mac has to be on and awake for calls to work.
+
 ## Costs (rough)
 
 - Twilio voice: a few cents per minute for the call plus a per-minute ConversationRelay fee. Check Twilio's pricing page for current rates.

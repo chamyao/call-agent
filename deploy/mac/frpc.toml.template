@@ -1,0 +1,12 @@
+# Generated from frpc.toml.template by deploy/mac/install.sh. Don't edit frpc.toml by hand.
+serverAddr = "${FRP_SERVER_ADDR}"
+serverPort = 7000
+auth.method = "token"
+auth.token = "${FRP_TOKEN}"
+
+[[proxies]]
+name = "call-agent"
+type = "http"
+localIP = "127.0.0.1"
+localPort = 8000
+customDomains = ["${PUBLIC_DOMAIN}"]

@@ -239,3 +239,26 @@ def test_unknown_call_id_is_rejected_on_websocket(tmp_path):
         ws.send_text(json.dumps({"type": "setup", "customParameters": {"call_id": "nope"}}))
         with pytest.raises(Exception):
             ws.receive_text()
+
+
+def test_rejects_unsigned_relay_websocket(tmp_path):
+    from dataclasses import replace
+
+    from starlette.websockets import WebSocketDisconnect
+    from twilio.request_validator import RequestValidator
+
+    settings = replace(make_settings(tmp_path), validate_twilio_signature=True)
+    client = TestClient(create_app(settings, brain=ScriptedBrain([]), twilio=FakeTwilio()))
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("/relay"):
+            pass
+    bad = {"X-Twilio-Signature": "forged"}
+    with pytest.raises(WebSocketDisconnect):
+        with client.websocket_connect("/relay", headers=bad):
+            pass
+
+    sig = RequestValidator("secret").compute_signature("wss://example.ngrok.app/relay", {})
+    with client.websocket_connect("/relay", headers={"X-Twilio-Signature": sig}) as ws:
+        ws.send_text(json.dumps({"type": "setup", "customParameters": {"call_id": "nope"}}))
+        with pytest.raises(Exception):
+            ws.receive_text()  # signed, but still closed for an unknown call
