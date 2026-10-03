@@ -97,7 +97,7 @@ server's admin manages `phonebot.service`; restarts go through them.
    ```
 
 2. Set `PUBLIC_URL=https://calls.ceruleantokyo.xyz` in `.env`, then run `deploy/east/deploy.sh`. It copies the code, `.env` and `profile.md`, and builds the virtualenv.
-3. Logs: `ssh east journalctl -u phonebot -f`.
+3. Logs: `ssh east tail -f app/logs/phonebot.log`. The script restarts the service with the one sudo command `phonebot` is allowed.
 
 Every Twilio request, including the `/relay` WebSocket handshake, must carry a
 valid `X-Twilio-Signature`; there is no setting to turn that off.
