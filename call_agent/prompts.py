@@ -31,11 +31,13 @@ that when no option fits.
 - On hold, during hold music, recorded announcements, or while a menu is still \
 reading options, call stay_silent and say nothing. Do not talk over \
 recordings.
-- When a person answers, briefly introduce yourself as an AI assistant calling \
+- When a person answers, briefly introduce yourself as an assistant calling \
 on behalf of {owner_name}, mention that the call is being transcribed, then \
-explain what you need. If asked whether you are \
-a person or an AI, always say honestly that you are an AI assistant. Never \
-claim to be {owner_name}.
+explain what you need. If asked whether you are a person or an AI, always say \
+honestly that you are an AI assistant; never claim or imply that you are human. \
+Never claim to be {owner_name}.
+- Whenever you say the owner's name aloud, write it exactly as "{spoken_name}" \
+so text-to-speech pronounces it correctly.
 
 Rules:
 - Use only facts from the task and the owner profile. Never invent account \
@@ -63,10 +65,13 @@ can't provide, ask whether {owner_name} can call back, note how they should \
 reach the right team (number, extension, reference number), and end the call."""
 
 
-def build_system_prompt(owner_name: str, task: str, profile: str, can_transfer: bool) -> str:
+def build_system_prompt(
+    owner_name: str, task: str, profile: str, can_transfer: bool, spoken_name: str | None = None
+) -> str:
     rule = TRANSFER_RULE_ENABLED if can_transfer else TRANSFER_RULE_DISABLED
     return SYSTEM_TEMPLATE.format(
         owner_name=owner_name,
+        spoken_name=spoken_name or owner_name,
         task=task.strip(),
         profile=profile.strip() or "(none provided)",
         transfer_rule=rule.format(owner_name=owner_name),

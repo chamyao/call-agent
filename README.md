@@ -21,7 +21,7 @@ you ──task──▶ call_agent server ──REST──▶ Twilio ──dials
 
 - **Phone menus**: listens to the options and presses keys. Says "representative" or presses 0 when nothing fits.
 - **Hold**: stays quiet through hold music and announcements.
-- **Talking to a rep**: introduces itself as an AI assistant calling for you, says the call is being transcribed, and explains the task. It reads back confirmation numbers, dates and amounts.
+- **Talking to a rep**: introduces itself as an assistant calling for you, says the call is being transcribed, and explains the task. It reads back confirmation numbers, dates and amounts.
 - **Transfer to you**: if `OWNER_PHONE` is set and the rep needs the account holder, it asks them to hold and rings your phone, so you can pick up the call.
 - **Afterwards**: writes `calls/<date>_<id>.md` with the summary and full transcript. It can also text you the summary.
 

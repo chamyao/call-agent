@@ -30,6 +30,8 @@ class Settings:
     max_call_seconds: int
     # Always on in production; only tests turn it off.
     validate_twilio_signature: bool = True
+    # How to spell the name for text-to-speech, e.g. "Chamm Yao"; defaults to owner_name
+    owner_name_spoken: str | None = None
 
     @property
     def ws_url(self) -> str:
@@ -53,6 +55,7 @@ def load_settings() -> Settings:
         api_token=required("CALL_AGENT_TOKEN"),
         owner_name=required("OWNER_NAME"),
         owner_phone=os.environ.get("OWNER_PHONE", "").strip() or None,
+        owner_name_spoken=os.environ.get("OWNER_NAME_SPOKEN", "").strip() or None,
         model=os.environ.get("CLAUDE_MODEL", "claude-opus-5-5"),
         effort=os.environ.get("CLAUDE_EFFORT", "low"),
         profile_path=Path(os.environ.get("PROFILE_PATH", "profile.md")),

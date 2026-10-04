@@ -232,6 +232,7 @@ def create_app(
             owner_name=settings.owner_name,
             profile=read_profile(),
             can_transfer=bool(settings.owner_phone),
+            spoken_name=settings.owner_name_spoken,
         )
         await session.on_message(setup)
         runner = asyncio.create_task(session.run())

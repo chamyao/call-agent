@@ -65,12 +65,13 @@ class CallSession:
         owner_name: str,
         profile: str,
         can_transfer: bool,
+        spoken_name: str | None = None,
     ):
         self.record = record
         self.brain = brain
         self.send = send
         self.can_transfer = can_transfer
-        self.system = build_system_prompt(owner_name, record.task, profile, can_transfer)
+        self.system = build_system_prompt(owner_name, record.task, profile, can_transfer, spoken_name)
         self.tools = build_tools(can_transfer)
         self.messages: list[dict] = []
         self.pending_results: list[dict] = []
