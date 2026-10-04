@@ -42,6 +42,15 @@ def watch(args: argparse.Namespace) -> None:
         _follow(client, args.call_id, interactive=True)
 
 
+def handback(args: argparse.Namespace) -> None:
+    with _client(args.server) as client:
+        r = client.post(f"/calls/{args.call_id}/handback", json={"note": " ".join(args.note)})
+        if r.status_code >= 400:
+            sys.exit(f"Couldn't hand the call back: {r.status_code} {r.json().get('detail', r.text)}")
+        print("Handed back. Your phone will drop off and the agent will rejoin the call.")
+        _follow(client, args.call_id, interactive=True)
+
+
 def _client(server: str) -> httpx.Client:
     token = os.environ.get("CALL_AGENT_TOKEN")
     if not token:
@@ -87,6 +96,12 @@ def _follow(client: httpx.Client, call_id: str, interactive: bool) -> None:
             seen = len(lines)
             if info["finished"]:
                 print(f"\nOutcome: {info['outcome'] or 'unknown'}\n\n{info['summary']}", flush=True)
+                if info["outcome"] == "transferred_to_owner":
+                    print(
+                        "\nYour phone is being connected to them. To give the call back to the agent:\n"
+                        f'  python -m call_agent handback {call_id} "what happened, and what to do next"',
+                        flush=True,
+                    )
                 return
             time.sleep(2)
     except KeyboardInterrupt:
@@ -115,6 +130,12 @@ def main() -> None:
     p_watch.add_argument("call_id")
     p_watch.add_argument("--server", default="http://127.0.0.1:8000")
     p_watch.set_defaults(func=watch)
+
+    p_back = sub.add_parser("handback", help="after a transfer, hand the call back to the agent")
+    p_back.add_argument("call_id")
+    p_back.add_argument("note", nargs="*", help="what happened while you were on, and what to do next")
+    p_back.add_argument("--server", default="http://127.0.0.1:8000")
+    p_back.set_defaults(func=handback)
 
     args = parser.parse_args()
     args.func(args)

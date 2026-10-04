@@ -80,6 +80,11 @@ press Enter to send it to the agent (the other side doesn't hear it), e.g.
 "a $10 fee is fine" or "ask for a supervisor". To follow a call that's already
 running, use `python -m call_agent watch <call id>`.
 
+If the agent transfers the call to you, you can give it back once you're done
+(say, after verifying your identity): `python -m call_agent handback <call id>
+"verified; get the order number"`. Your phone drops off and the agent rejoins
+the same call with your note.
+
 Writing good tasks: say what you want, what you'd accept as a fallback, and
 what it must not agree to. Put identifiers like account, order and tracking
 numbers either in the task or in `profile.md`.

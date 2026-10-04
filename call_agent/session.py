@@ -50,6 +50,8 @@ class CallRecord:
     summary: str | None = None
     finalizing: bool = False  # summary being written; guards against running twice
     finalized: bool = False  # summary and call log are done
+    handback_note: str | None = None  # set when the owner hands a transferred call back
+    resuming: bool = False  # waiting for the agent to reconnect after a hand-back
 
 
 def _get(block: Any, key: str) -> Any:
@@ -115,6 +117,18 @@ class CallSession:
             log.error("ConversationRelay error: %s", msg.get("description"))
         else:
             log.debug("Ignoring ConversationRelay message: %s", msg)
+
+    async def resume_after_handback(self, note: str) -> None:
+        """Start a turn right away telling the agent it has the call back."""
+        earlier = "\n".join(f"{who}: {text}" for who, text in self.record.transcript[-60:])
+        await self.events.put(
+            "[note: earlier you transferred this call to the owner. They spoke with the "
+            "other side (that part was not transcribed) and have now handed the call back "
+            f"to you. The owner's note: {note or '(none)'}\n"
+            f"Transcript before the transfer, most recent last:\n{earlier}\n"
+            "The other side is still on the line. Say you're back, for example "
+            "\"Thanks for holding, I'm back on the line,\" and continue the task.]"
+        )
 
     async def owner_message(self, text: str) -> None:
         """A message the owner typed during the call; it starts a turn right away."""

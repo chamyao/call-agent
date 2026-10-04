@@ -71,10 +71,22 @@ class ScriptedBrain:
         return "SUMMARY: done"
 
 
+class FakeCalls:
+    def __init__(self, twilio):
+        self.twilio = twilio
+
+    def create(self, **kwargs):
+        return self.twilio._create(**kwargs)
+
+    def __call__(self, sid):
+        return SimpleNamespace(update=lambda **kw: self.twilio.updated.append((sid, kw)))
+
+
 class FakeTwilio:
     def __init__(self):
         self.created = []
-        self.calls = SimpleNamespace(create=self._create)
+        self.updated = []
+        self.calls = FakeCalls(self)
         self.messages = SimpleNamespace(create=lambda **kw: None)
 
     def _create(self, **kwargs):
@@ -350,3 +362,40 @@ def test_owner_can_message_the_agent_mid_call(tmp_path):
     status = client.get(f"/calls/{call_id}", headers=AUTH).json()
     assert ["owner", "A $10 fee is fine."] in status["transcript"]
     assert client.post(f"/calls/{call_id}/message", json={"text": "x"}).status_code == 401
+
+
+def test_owner_can_hand_a_transferred_call_back(tmp_path):
+    brain = ScriptedBrain(
+        [
+            ("One moment, I'll connect Test Owner.", [tool_use("t1", "transfer_to_owner", reason="needs ID check")]),
+            ("Thanks for holding, I'm back on the line.", [tool_use("s1", "stay_silent")]),
+        ]
+    )
+    twilio = FakeTwilio()
+    client = TestClient(create_app(make_settings(tmp_path, owner_phone="+15551112222"), brain=brain, twilio=twilio))
+    call_id = start_call(client, twilio)
+
+    assert client.post(f"/calls/{call_id}/handback", json={"note": "x"}, headers=AUTH).status_code == 409
+
+    with client.websocket_connect("/relay") as ws:
+        ws.send_text(json.dumps({"type": "setup", "callSid": "CA_test", "customParameters": {"call_id": call_id}}))
+        ws.send_text(json.dumps({"type": "prompt", "voicePrompt": "I need to verify the account holder.", "last": True}))
+        recv_until(ws, "end")
+    assert client.get(f"/calls/{call_id}", headers=AUTH).json()["outcome"] == "transferred_to_owner"
+
+    r = client.post(f"/calls/{call_id}/handback", json={"note": "Verified. Get the order number."}, headers=AUTH)
+    assert r.status_code == 200
+    assert twilio.updated[-1] == ("CA_test", {"url": f"https://example.ngrok.app/resume?call_id={call_id}", "method": "POST"})
+    assert "<ConversationRelay" in client.post(f"/resume?call_id={call_id}", data={}).text
+    assert "<Say" not in client.post(f"/dial-done?call_id={call_id}", data={"DialCallStatus": "canceled"}).text
+
+    with client.websocket_connect("/relay") as ws:
+        ws.send_text(json.dumps({"type": "setup", "callSid": "CA_test", "customParameters": {"call_id": call_id}}))
+        tokens = []
+        while not (tokens and tokens[-1].get("last")):
+            tokens.append(json.loads(ws.receive_text()))
+    resume_turn = brain.seen[1][-1]["content"][-1]["text"]
+    assert "handed the call back" in resume_turn and "Verified. Get the order number." in resume_turn
+    assert "back on the line" in "".join(m.get("token", "") for m in tokens)
+    status = client.get(f"/calls/{call_id}", headers=AUTH).json()
+    assert status["finished"] and status["outcome"] is None

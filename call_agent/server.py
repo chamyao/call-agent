@@ -39,6 +39,10 @@ class OwnerMessage(BaseModel):
     text: str
 
 
+class HandbackRequest(BaseModel):
+    note: str = ""
+
+
 def create_app(
     settings: Settings | None = None,
     brain: Brain | None = None,
@@ -166,6 +170,27 @@ def create_app(
         await session.owner_message(body.text.strip())
         return {"ok": True}
 
+    @app.post("/calls/{call_id}/handback")
+    async def handback(call_id: str, body: HandbackRequest, authorization: str | None = Header(default=None)):
+        """Take the call back from the owner after a transfer and reconnect it to the agent."""
+        require_token(authorization)
+        record = get_call(call_id)
+        if record.outcome != "transferred_to_owner" or not record.call_sid:
+            raise HTTPException(409, "This call isn't currently transferred to you")
+        record.handback_note = body.note.strip()
+        record.resuming = True
+        try:
+            await asyncio.to_thread(
+                twilio.calls(record.call_sid).update,
+                url=f"{settings.public_url}/resume?call_id={call_id}",
+                method="POST",
+            )
+        except TwilioRestException as e:
+            record.resuming = False
+            raise HTTPException(502, f"Twilio couldn't hand the call back: {e.msg}") from None
+        record.transcript.append(("note", "owner handed the call back to the agent"))
+        return {"ok": True}
+
     @app.get("/calls/{call_id}")
     async def call_status(call_id: str, authorization: str | None = Header(default=None)):
         require_token(authorization)
@@ -182,10 +207,7 @@ def create_app(
 
     # --- Twilio webhooks ------------------------------------------------------
 
-    @app.post("/twiml")
-    async def twiml(request: Request, call_id: str):
-        await twilio_form(request)
-        get_call(call_id)
+    def relay_twiml(call_id: str) -> Response:
         response = VoiceResponse()
         connect = Connect(action=f"{settings.public_url}/after?call_id={call_id}", method="POST")
         voice = {"tts_provider": settings.tts_provider, "voice": settings.tts_voice}
@@ -193,6 +215,19 @@ def create_app(
         relay.parameter(name="call_id", value=call_id)
         response.append(connect)
         return Response(str(response), media_type="application/xml")
+
+    @app.post("/twiml")
+    async def twiml(request: Request, call_id: str):
+        await twilio_form(request)
+        get_call(call_id)
+        return relay_twiml(call_id)
+
+    @app.post("/resume")
+    async def resume(request: Request, call_id: str):
+        """Twilio fetches this after a hand-back; it reconnects the call to the agent."""
+        await twilio_form(request)
+        get_call(call_id)
+        return relay_twiml(call_id)
 
     @app.post("/after")
     async def after_relay(request: Request, call_id: str):
@@ -235,6 +270,8 @@ def create_app(
         form = await twilio_form(request)
         record = get_call(call_id)
         response = VoiceResponse()
+        if record.handback_note is not None:
+            return Response(str(response), media_type="application/xml")  # call was redirected back to the agent
         if form.get("DialCallStatus") in {"no-answer", "busy", "failed", "canceled"}:
             record.transcript.append(("note", f"owner didn't answer the transfer ({form.get('DialCallStatus')})"))
             record.outcome = "transfer_unanswered"
@@ -269,9 +306,15 @@ def create_app(
         setup = json.loads(await ws.receive_text())
         call_id = (setup.get("customParameters") or {}).get("call_id", "")
         record = calls.get(call_id)
-        if setup.get("type") != "setup" or record is None or record.connected:
+        if setup.get("type") != "setup" or record is None or (record.connected and not record.resuming):
             await ws.close(code=1008)
             return
+        resuming = record.resuming
+        if resuming:
+            # A hand-back: this is a second session on the same call.
+            record.resuming = False
+            record.outcome = record.outcome_reason = None
+            record.finalizing = record.finalized = False
         record.connected = True
         record.status = "in-progress"
 
@@ -286,9 +329,12 @@ def create_app(
             profile=read_profile(),
             can_transfer=bool(settings.owner_phone),
             spoken_name=settings.owner_name_spoken,
+            opening_silence_seconds=0 if resuming else 4.0,
         )
         sessions[call_id] = session
         await session.on_message(setup)
+        if resuming:
+            await session.resume_after_handback(record.handback_note or "")
         runner = asyncio.create_task(session.run())
         try:
             while True:
