@@ -228,10 +228,13 @@ def test_transfer_dials_owner(tmp_path):
         assert client.post(f"/handoff-transcript?call_id={call_id}", data=data).status_code == 204
     say("inbound_track", "Can I get the last four of your social?")
     say("outbound_track", "Sure, one two three four.")
+    say("outbound_track", "The code is 742934 and my social is 123-45-6789.")
     say("outbound_track", "partial words", final="false")
     lines = client.get(f"/calls/{call_id}", headers=AUTH).json()["transcript"]
     assert ["them", "Can I get the last four of your social?"] in lines
-    assert ["owner_on_phone", "Sure, one two three four."] in lines
+    assert ["owner_on_phone", "Sure, [number withheld]."] in lines
+    assert ["owner_on_phone", "The code is [number withheld] and my social is [number withheld]."] in lines
+    assert not any("742934" in text or "6789" in text for _, text in lines)
     assert not any(text == "partial words" for _, text in lines)
 
     client.post(f"/status?call_id={call_id}", data={"CallStatus": "completed"})

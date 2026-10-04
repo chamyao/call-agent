@@ -27,6 +27,15 @@ from .session import CallRecord, CallSession
 log = logging.getLogger(__name__)
 
 E164_RE = re.compile(r"^\+[1-9]\d{6,14}$")
+_DIGIT_WORD = r"(?:zero|oh|one|two|three|four|five|six|seven|eight|nine)"
+# 4+ digits, possibly split by spaces, dashes or dots; or 4+ spoken digit words in a row
+NUMBER_RE = re.compile(
+    rf"\d(?:[\s.-]*\d){{3,}}|\b{_DIGIT_WORD}(?:[\s,-]+{_DIGIT_WORD}){{3,}}\b", re.IGNORECASE
+)
+
+
+def redact_numbers(text: str) -> str:
+    return NUMBER_RE.sub("[number withheld]", text)
 TERMINAL_STATUSES = {"completed", "busy", "no-answer", "failed", "canceled"}
 
 
@@ -296,6 +305,8 @@ def create_app(
             if text:
                 # On the call to the company, inbound audio is their side and outbound is the owner's.
                 who = "them" if form.get("Track") == "inbound_track" else "owner_on_phone"
+                if who == "owner_on_phone":
+                    text = redact_numbers(text)  # codes, SSNs, card numbers the owner reads out
                 record.transcript.append((who, text))
         return Response(status_code=204)
 
