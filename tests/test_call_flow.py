@@ -221,6 +221,23 @@ def test_transfer_dials_owner(tmp_path):
     missed = client.post(f"/dial-done?call_id={call_id}", data={"DialCallStatus": "no-answer"})
     assert "can't be reached right now" in missed.text
 
+    assert "<Start><Transcription" in after.text and f"/handoff-transcript?call_id={call_id}" in after.text
+    def say(track, text, final="true"):
+        data = {"TranscriptionEvent": "transcription-content", "Track": track, "Final": final,
+                "TranscriptionData": json.dumps({"transcript": text, "confidence": 0.9})}
+        assert client.post(f"/handoff-transcript?call_id={call_id}", data=data).status_code == 204
+    say("inbound_track", "Can I get the last four of your social?")
+    say("outbound_track", "Sure, one two three four.")
+    say("outbound_track", "partial words", final="false")
+    lines = client.get(f"/calls/{call_id}", headers=AUTH).json()["transcript"]
+    assert ["them", "Can I get the last four of your social?"] in lines
+    assert ["owner_on_phone", "Sure, one two three four."] in lines
+    assert not any(text == "partial words" for _, text in lines)
+
+    client.post(f"/status?call_id={call_id}", data={"CallStatus": "completed"})
+    status = client.get(f"/calls/{call_id}", headers=AUTH).json()
+    assert status["finished"] and status["outcome"] == "transfer_unanswered"
+
 
 def test_no_transfer_tool_without_owner_phone(tmp_path):
     from call_agent.prompts import build_tools
@@ -386,7 +403,12 @@ def test_owner_can_hand_a_transferred_call_back(tmp_path):
     r = client.post(f"/calls/{call_id}/handback", json={"note": "Verified. Get the order number."}, headers=AUTH)
     assert r.status_code == 200
     assert twilio.updated[-1] == ("CA_test", {"url": f"https://example.ngrok.app/resume?call_id={call_id}", "method": "POST"})
-    assert "<ConversationRelay" in client.post(f"/resume?call_id={call_id}", data={}).text
+    client.post(f"/handoff-transcript?call_id={call_id}", data={
+        "TranscriptionEvent": "transcription-content", "Track": "outbound_track", "Final": "true",
+        "TranscriptionData": json.dumps({"transcript": "I'm verified, please continue with my assistant."})})
+    resumed = client.post(f"/resume?call_id={call_id}", data={}).text
+    assert "<ConversationRelay" in resumed
+    assert f'<Stop><Transcription name="handoff-{call_id}"' in resumed
     assert "<Say" not in client.post(f"/dial-done?call_id={call_id}", data={"DialCallStatus": "canceled"}).text
 
     with client.websocket_connect("/relay") as ws:
@@ -396,6 +418,7 @@ def test_owner_can_hand_a_transferred_call_back(tmp_path):
             tokens.append(json.loads(ws.receive_text()))
     resume_turn = brain.seen[1][-1]["content"][-1]["text"]
     assert "handed the call back" in resume_turn and "Verified. Get the order number." in resume_turn
+    assert "owner_on_phone: I'm verified, please continue with my assistant." in resume_turn
     assert "back on the line" in "".join(m.get("token", "") for m in tokens)
     status = client.get(f"/calls/{call_id}", headers=AUTH).json()
     assert status["finished"] and status["outcome"] is None

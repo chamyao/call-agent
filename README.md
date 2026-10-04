@@ -83,7 +83,8 @@ running, use `python -m call_agent watch <call id>`.
 If the agent transfers the call to you, you can give it back once you're done
 (say, after verifying your identity): `python -m call_agent handback <call id>
 "verified; get the order number"`. Your phone drops off and the agent rejoins
-the same call with your note.
+the same call with your note. Your part of the call is transcribed too, so it
+shows up live (as YOU) and the agent knows what was said when it rejoins.
 
 Writing good tasks: say what you want, what you'd accept as a fallback, and
 what it must not agree to. Put identifiers like account, order and tracking

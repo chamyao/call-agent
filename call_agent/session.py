@@ -123,7 +123,8 @@ class CallSession:
         earlier = "\n".join(f"{who}: {text}" for who, text in self.record.transcript[-60:])
         await self.events.put(
             "[note: earlier you transferred this call to the owner. They spoke with the "
-            "other side (that part was not transcribed) and have now handed the call back "
+            "other side (their lines are marked owner_on_phone below, when transcribed) "
+            "and have now handed the call back "
             f"to you. The owner's note: {note or '(none)'}\n"
             f"Transcript before the transfer, most recent last:\n{earlier}\n"
             "The other side is still on the line. Say you're back, for example "

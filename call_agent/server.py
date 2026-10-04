@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from twilio.request_validator import RequestValidator
 from twilio.base.exceptions import TwilioRestException
 from twilio.rest import Client as TwilioClient
-from twilio.twiml.voice_response import Connect, Dial, VoiceResponse
+from twilio.twiml.voice_response import Connect, Dial, Start, Stop, VoiceResponse
 
 from .brain import Brain, ClaudeBrain
 from .config import Settings, load_settings
@@ -207,8 +207,15 @@ def create_app(
 
     # --- Twilio webhooks ------------------------------------------------------
 
-    def relay_twiml(call_id: str) -> Response:
+    def handoff_transcription_name(call_id: str) -> str:
+        return f"handoff-{call_id}"
+
+    def relay_twiml(call_id: str, stop_handoff_transcription: bool = False) -> Response:
         response = VoiceResponse()
+        if stop_handoff_transcription:
+            stop = Stop()
+            stop.transcription(name=handoff_transcription_name(call_id))
+            response.append(stop)
         connect = Connect(action=f"{settings.public_url}/after?call_id={call_id}", method="POST")
         voice = {"tts_provider": settings.tts_provider, "voice": settings.tts_voice}
         relay = connect.conversation_relay(url=settings.ws_url, **{k: v for k, v in voice.items() if v})
@@ -227,7 +234,7 @@ def create_app(
         """Twilio fetches this after a hand-back; it reconnects the call to the agent."""
         await twilio_form(request)
         get_call(call_id)
-        return relay_twiml(call_id)
+        return relay_twiml(call_id, stop_handoff_transcription=True)
 
     @app.post("/after")
     async def after_relay(request: Request, call_id: str):
@@ -241,6 +248,18 @@ def create_app(
         response = VoiceResponse()
         if handoff.get("action") == "transfer" and settings.owner_phone:
             base = settings.public_url
+            # Transcribe the owner's conversation too, so it shows up live and the
+            # agent has it if the call is handed back. The rep was told at the start
+            # that the call is transcribed.
+            start = Start()
+            start.transcription(
+                name=handoff_transcription_name(call_id),
+                track="both_tracks",
+                status_callback_url=f"{base}/handoff-transcript?call_id={call_id}",
+                status_callback_method="POST",
+                partial_results=False,
+            )
+            response.append(start)
             dial = Dial(
                 caller_id=settings.twilio_from_number,
                 timeout=25,
@@ -263,6 +282,22 @@ def create_app(
         response = VoiceResponse()
         response.say(f"Transfer from your call assistant, on the call to {_spoken_number(record.to)}: {reason}. Connecting you now.")
         return Response(str(response), media_type="application/xml")
+
+    @app.post("/handoff-transcript")
+    async def handoff_transcript(request: Request, call_id: str):
+        """Live transcription of the owner's part of the call, after a transfer."""
+        form = await twilio_form(request)
+        record = get_call(call_id)
+        if form.get("TranscriptionEvent") == "transcription-content" and form.get("Final", "true") == "true":
+            try:
+                text = (json.loads(form.get("TranscriptionData") or "{}").get("transcript") or "").strip()
+            except json.JSONDecodeError:
+                text = ""
+            if text:
+                # On the call to the company, inbound audio is their side and outbound is the owner's.
+                who = "them" if form.get("Track") == "inbound_track" else "owner_on_phone"
+                record.transcript.append((who, text))
+        return Response(status_code=204)
 
     @app.post("/dial-done")
     async def dial_done(request: Request, call_id: str):
@@ -289,6 +324,10 @@ def create_app(
         record.status = form.get("CallStatus", record.status)
         if record.status in TERMINAL_STATUSES and not record.connected:
             await finalize(record)  # never reached the AI session
+        elif record.status in TERMINAL_STATUSES and record.outcome in {"transferred_to_owner", "transfer_unanswered"}:
+            # Rewrite the summary and log to include the owner's part of the call.
+            record.finalizing = record.finalized = False
+            await finalize(record)
         return Response(status_code=204)
 
     @app.websocket("/relay")

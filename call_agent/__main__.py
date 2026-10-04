@@ -91,7 +91,13 @@ def _follow(client: httpx.Client, call_id: str, interactive: bool) -> None:
                 last_status = info["status"]
             lines = info.get("transcript") or []
             for who, text in lines[seen:]:
-                label = {"them": "THEM ", "agent": "AGENT", "owner": "YOU  ", "note": "  ..."}.get(who, who)
+                label = {
+                    "them": "THEM   ",
+                    "agent": "AGENT  ",
+                    "owner_on_phone": "YOU    ",
+                    "owner": "YOU>BOT",
+                    "note": "   ...",
+                }.get(who, who)
                 print(f"{label}  {text}", flush=True)
             seen = len(lines)
             if info["finished"]:
