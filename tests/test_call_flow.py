@@ -199,6 +199,15 @@ def test_transfer_dials_owner(tmp_path):
 
     after = client.post(f"/after?call_id={call_id}", data={"HandoffData": end["handoffData"]})
     assert "<Dial" in after.text and "+15551112222" in after.text
+    assert f"/whisper?call_id={call_id}" in after.text and f"/dial-done?call_id={call_id}" in after.text
+
+    briefing = client.post(f"/whisper?call_id={call_id}", data={})
+    assert "needs ID check" in briefing.text and "8 0 0, 5 5 5, 1 2 3 4" in briefing.text
+
+    answered = client.post(f"/dial-done?call_id={call_id}", data={"DialCallStatus": "completed"})
+    assert "<Say" not in answered.text and "<Hangup" in answered.text
+    missed = client.post(f"/dial-done?call_id={call_id}", data={"DialCallStatus": "no-answer"})
+    assert "can't be reached right now" in missed.text
 
 
 def test_no_transfer_tool_without_owner_phone(tmp_path):

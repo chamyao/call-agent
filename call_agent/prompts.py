@@ -55,10 +55,18 @@ say goodbye, and call end_call with the outcome.
 """
 
 TRANSFER_RULE_ENABLED = """\
-- If they insist on speaking to the account holder, need identity verification \
-you can't provide, or the decision needs {owner_name}, tell them you'll connect \
-{owner_name} now and call transfer_to_owner. Ask them to hold for a moment \
-first."""
+- Connecting {owner_name} (transfer_to_owner) is a last resort. Never mention, \
+offer or hint that {owner_name} could join or is reachable. If they ask to \
+speak with {owner_name}, say you're handling this on their behalf and keep \
+going. First try everything else: answer from the task and profile, ask what \
+alternatives exist, and ask whether they can proceed without it. Transfer only \
+when the task cannot be completed without {owner_name} personally: a payment \
+the task needs that only {owner_name} can make (never take or read out card \
+details yourself), identity verification you cannot provide, or they refuse to \
+continue with anyone but the account holder after you have tried. Then tell \
+them you'll connect {owner_name}, ask them to hold for a moment, and call \
+transfer_to_owner with a short reason (for example "billing needs a card \
+payment of $42")."""
 
 TRANSFER_RULE_DISABLED = """\
 - If they insist on speaking to the account holder or need verification you \
@@ -127,9 +135,10 @@ END_CALL = _tool(
 
 TRANSFER_TO_OWNER = _tool(
     "transfer_to_owner",
-    "Connect the owner to this call and leave. Tell the other side to hold "
-    "for a moment in the same reply before calling this.",
-    {"reason": {"type": "string", "description": "Why the owner is needed."}},
+    "Last resort: ring the owner and connect them to this call, then leave. Use "
+    "only when the task cannot be finished without the owner personally. Tell "
+    "the other side to hold for a moment in the same reply before calling this.",
+    {"reason": {"type": "string", "description": "Short reason, read to the owner before connecting."}},
     ["reason"],
 )
 

@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from twilio.request_validator import RequestValidator
 from twilio.base.exceptions import TwilioRestException
 from twilio.rest import Client as TwilioClient
-from twilio.twiml.voice_response import Connect, VoiceResponse
+from twilio.twiml.voice_response import Connect, Dial, VoiceResponse
 
 from .brain import Brain, ClaudeBrain
 from .config import Settings, load_settings
@@ -188,9 +188,44 @@ def create_app(
             handoff = {}
         response = VoiceResponse()
         if handoff.get("action") == "transfer" and settings.owner_phone:
-            response.dial(settings.owner_phone, caller_id=settings.twilio_from_number)
+            base = settings.public_url
+            dial = Dial(
+                caller_id=settings.twilio_from_number,
+                timeout=25,
+                action=f"{base}/dial-done?call_id={call_id}",
+                method="POST",
+            )
+            # The owner hears a one-line briefing before being connected.
+            dial.number(settings.owner_phone, url=f"{base}/whisper?call_id={call_id}", method="POST")
+            response.append(dial)
         else:
             response.hangup()
+        return Response(str(response), media_type="application/xml")
+
+    @app.post("/whisper")
+    async def whisper(request: Request, call_id: str):
+        """Played to the owner when they pick up a transfer, before the call connects."""
+        await twilio_form(request)
+        record = get_call(call_id)
+        reason = (record.outcome_reason or "they need you on the line").strip().rstrip(".")
+        response = VoiceResponse()
+        response.say(f"Transfer from your call assistant, on the call to {_spoken_number(record.to)}: {reason}. Connecting you now.")
+        return Response(str(response), media_type="application/xml")
+
+    @app.post("/dial-done")
+    async def dial_done(request: Request, call_id: str):
+        """After the transfer leg ends; if the owner never picked up, tell the other side."""
+        form = await twilio_form(request)
+        record = get_call(call_id)
+        response = VoiceResponse()
+        if form.get("DialCallStatus") in {"no-answer", "busy", "failed", "canceled"}:
+            record.transcript.append(("note", f"owner didn't answer the transfer ({form.get('DialCallStatus')})"))
+            record.outcome = "transfer_unanswered"
+            response.say(
+                f"Sorry, {settings.owner_name_spoken or settings.owner_name} can't be reached right now. "
+                "They'll follow up with you. Thank you for your patience. Goodbye."
+            )
+        response.hangup()
         return Response(str(response), media_type="application/xml")
 
     @app.post("/status")
@@ -270,3 +305,10 @@ def save_call(calls_dir: Path, record: CallRecord, transcript: str) -> Path:
         f"## Transcript\n\n```\n{transcript or '(empty)'}\n```\n"
     )
     return path
+
+
+def _spoken_number(number: str) -> str:
+    """+18007425877 -> "8 0 0, 7 4 2, 5 8 7 7" so text-to-speech reads digits."""
+    digits = number[2:] if number.startswith("+1") and len(number) == 12 else number.lstrip("+")
+    groups = [digits[:3], digits[3:6], digits[6:]] if len(digits) == 10 else [digits]
+    return ", ".join(" ".join(g) for g in groups)
