@@ -32,6 +32,9 @@ class Settings:
     validate_twilio_signature: bool = True
     # How to spell the name for text-to-speech, e.g. "Chamm Yao"; defaults to owner_name
     owner_name_spoken: str | None = None
+    # Twilio ConversationRelay voice, e.g. provider "Google" or "Amazon"; None = Twilio default
+    tts_provider: str | None = None
+    tts_voice: str | None = None
 
     @property
     def ws_url(self) -> str:
@@ -56,6 +59,8 @@ def load_settings() -> Settings:
         owner_name=required("OWNER_NAME"),
         owner_phone=os.environ.get("OWNER_PHONE", "").strip() or None,
         owner_name_spoken=os.environ.get("OWNER_NAME_SPOKEN", "").strip() or None,
+        tts_provider=os.environ.get("TTS_PROVIDER", "").strip() or None,
+        tts_voice=os.environ.get("TTS_VOICE", "").strip() or None,
         model=os.environ.get("CLAUDE_MODEL", "claude-opus-5-5"),
         effort=os.environ.get("CLAUDE_EFFORT", "low"),
         profile_path=Path(os.environ.get("PROFILE_PATH", "profile.md")),

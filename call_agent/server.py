@@ -171,7 +171,8 @@ def create_app(
         get_call(call_id)
         response = VoiceResponse()
         connect = Connect(action=f"{settings.public_url}/after?call_id={call_id}", method="POST")
-        relay = connect.conversation_relay(url=settings.ws_url)
+        voice = {"tts_provider": settings.tts_provider, "voice": settings.tts_voice}
+        relay = connect.conversation_relay(url=settings.ws_url, **{k: v for k, v in voice.items() if v})
         relay.parameter(name="call_id", value=call_id)
         response.append(connect)
         return Response(str(response), media_type="application/xml")

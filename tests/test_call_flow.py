@@ -275,3 +275,45 @@ def test_twilio_refusal_is_reported(tmp_path):
     r = client.post("/calls", json={"to": "+12055550100", "task": "x"}, headers=AUTH)
     assert r.status_code == 502
     assert "not authorized" in r.json()["detail"]
+
+
+def test_agent_opens_when_nobody_speaks_after_pickup():
+    from call_agent.session import CallRecord, CallSession
+
+    async def scenario():
+        sent = []
+
+        async def send(msg):
+            sent.append(msg)
+
+        brain = ScriptedBrain([("Hi, I'm an assistant calling on behalf of Test Owner.", [])])
+        record = CallRecord(call_id="c1", to="+18005551234", task="x")
+        session = CallSession(record, brain, send, "Test Owner", "", False, opening_silence_seconds=0.05)
+        await session.on_message({"type": "setup", "callSid": "CA_test"})
+        runner = asyncio.create_task(session.run())
+        for _ in range(100):
+            if brain.seen:
+                break
+            await asyncio.sleep(0.01)
+        runner.cancel()
+        try:
+            await runner
+        except asyncio.CancelledError:
+            pass
+        return brain, record
+
+    brain, record = asyncio.run(scenario())
+    first_turn = brain.seen[0][0]["content"][-1]["text"]
+    assert "nobody has said anything yet" in first_turn
+    assert ("agent", "Hi, I'm an assistant calling on behalf of Test Owner.") in record.transcript
+
+
+def test_tts_voice_is_configurable(tmp_path):
+    from dataclasses import replace
+
+    settings = replace(make_settings(tmp_path), tts_provider="Google", tts_voice="en-US-Neural2-F")
+    twilio = FakeTwilio()
+    client = TestClient(create_app(settings, brain=ScriptedBrain([]), twilio=twilio))
+    call_id = start_call(client, twilio)
+    twiml = client.post(f"/twiml?call_id={call_id}", data={"CallSid": "CA_test"}).text
+    assert 'ttsProvider="Google"' in twiml and 'voice="en-US-Neural2-F"' in twiml

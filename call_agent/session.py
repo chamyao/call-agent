@@ -66,8 +66,11 @@ class CallSession:
         profile: str,
         can_transfer: bool,
         spoken_name: str | None = None,
+        opening_silence_seconds: float = 4.0,
     ):
         self.record = record
+        # If nobody speaks this long after pickup, open the conversation ourselves.
+        self.opening_silence_seconds = opening_silence_seconds
         self.brain = brain
         self.send = send
         self.can_transfer = can_transfer
@@ -117,8 +120,21 @@ class CallSession:
 
     async def run(self) -> None:
         try:
+            first = True
             while not self.ending:
-                batch = [await self.events.get()]
+                if first and self.opening_silence_seconds:
+                    first = False
+                    try:
+                        batch = [await asyncio.wait_for(self.events.get(), self.opening_silence_seconds)]
+                    except asyncio.TimeoutError:
+                        batch = []
+                        self.record.transcript.append(("note", "silence after pickup; agent opens"))
+                        self.notes.append(
+                            f"[note: the call connected {self.opening_silence_seconds:g} seconds ago "
+                            "and nobody has said anything yet. Give your opening line now.]"
+                        )
+                else:
+                    batch = [await self.events.get()]
                 while not self.events.empty():
                     batch.append(self.events.get_nowait())
                 self._append_user_turn(batch)
