@@ -97,7 +97,7 @@ class CallSession:
             text = (msg.get("voicePrompt") or "").strip()
             if text:
                 self.record.transcript.append(("them", text))
-                await self.events.put(text)
+                await self.events.put(f"[them] {text}")
         elif kind == "dtmf":
             self.notes.append(f"[keypad tone from their side: {msg.get('digit', '')}]")
         elif kind == "interrupt":
@@ -115,6 +115,11 @@ class CallSession:
             log.error("ConversationRelay error: %s", msg.get("description"))
         else:
             log.debug("Ignoring ConversationRelay message: %s", msg)
+
+    async def owner_message(self, text: str) -> None:
+        """A message the owner typed during the call; it starts a turn right away."""
+        self.record.transcript.append(("owner", text))
+        await self.events.put(f"[live message from the owner, typed during the call: {text}]")
 
     # --- main loop ----------------------------------------------------------
 
@@ -150,7 +155,7 @@ class CallSession:
             self.done.set()
 
     def _append_user_turn(self, batch: list[str]) -> None:
-        lines = self.notes + [f"[them] {text}" for text in batch]
+        lines = self.notes + batch
         self.notes = []
         content = self.pending_results + [{"type": "text", "text": "\n".join(lines)}]
         self.pending_results = []

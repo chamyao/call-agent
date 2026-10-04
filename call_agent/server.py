@@ -35,6 +35,10 @@ class CallRequest(BaseModel):
     task: str
 
 
+class OwnerMessage(BaseModel):
+    text: str
+
+
 def create_app(
     settings: Settings | None = None,
     brain: Brain | None = None,
@@ -45,6 +49,7 @@ def create_app(
     twilio = twilio or TwilioClient(settings.twilio_account_sid, settings.twilio_auth_token)
     validator = RequestValidator(settings.twilio_auth_token)
     calls: dict[str, CallRecord] = {}
+    sessions: dict[str, CallSession] = {}  # live calls, for owner messages
 
     app = FastAPI(title="call-agent")
     app.state.calls = calls
@@ -148,6 +153,18 @@ def create_app(
             raise HTTPException(502, f"Twilio refused the call: {e.msg}") from None
         record.call_sid = call.sid
         return {"call_id": call_id, "call_sid": call.sid}
+
+    @app.post("/calls/{call_id}/message")
+    async def owner_message(call_id: str, body: OwnerMessage, authorization: str | None = Header(default=None)):
+        require_token(authorization)
+        get_call(call_id)
+        session = sessions.get(call_id)
+        if session is None:
+            raise HTTPException(409, "The call isn't connected to the assistant right now")
+        if not body.text.strip():
+            raise HTTPException(400, "Message is empty")
+        await session.owner_message(body.text.strip())
+        return {"ok": True}
 
     @app.get("/calls/{call_id}")
     async def call_status(call_id: str, authorization: str | None = Header(default=None)):
@@ -270,6 +287,7 @@ def create_app(
             can_transfer=bool(settings.owner_phone),
             spoken_name=settings.owner_name_spoken,
         )
+        sessions[call_id] = session
         await session.on_message(setup)
         runner = asyncio.create_task(session.run())
         try:
@@ -278,6 +296,7 @@ def create_app(
         except WebSocketDisconnect:
             pass
         finally:
+            sessions.pop(call_id, None)
             runner.cancel()
             try:
                 await runner

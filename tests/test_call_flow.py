@@ -326,3 +326,27 @@ def test_tts_voice_is_configurable(tmp_path):
     call_id = start_call(client, twilio)
     twiml = client.post(f"/twiml?call_id={call_id}", data={"CallSid": "CA_test"}).text
     assert 'ttsProvider="Google"' in twiml and 'voice="en-US-Neural2-F"' in twiml
+
+
+def test_owner_can_message_the_agent_mid_call(tmp_path):
+    brain = ScriptedBrain([("", [tool_use("s1", "stay_silent")])])
+    twilio = FakeTwilio()
+    client = TestClient(create_app(make_settings(tmp_path), brain=brain, twilio=twilio))
+    call_id = start_call(client, twilio)
+
+    assert client.post(f"/calls/{call_id}/message", json={"text": "hi"}, headers=AUTH).status_code == 409
+
+    with client.websocket_connect("/relay") as ws:
+        ws.send_text(json.dumps({"type": "setup", "customParameters": {"call_id": call_id}}))
+        r = client.post(f"/calls/{call_id}/message", json={"text": "A $10 fee is fine."}, headers=AUTH)
+        assert r.status_code == 200
+        for _ in range(200):
+            if brain.seen:
+                break
+            time.sleep(0.01)
+
+    assert "live message from the owner" in brain.seen[0][-1]["content"][-1]["text"]
+    assert "A $10 fee is fine." in brain.seen[0][-1]["content"][-1]["text"]
+    status = client.get(f"/calls/{call_id}", headers=AUTH).json()
+    assert ["owner", "A $10 fee is fine."] in status["transcript"]
+    assert client.post(f"/calls/{call_id}/message", json={"text": "x"}).status_code == 401

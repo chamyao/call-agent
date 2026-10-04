@@ -75,6 +75,11 @@ python -m call_agent call --to +18007425877 --task "Ask when my order 12345 will
 
 The command prints status updates, then the outcome and summary when the call ends.
 
+While the call runs, the command shows the live transcript. Type a line and
+press Enter to send it to the agent (the other side doesn't hear it), e.g.
+"a $10 fee is fine" or "ask for a supervisor". To follow a call that's already
+running, use `python -m call_agent watch <call id>`.
+
 Writing good tasks: say what you want, what you'd accept as a fallback, and
 what it must not agree to. Put identifiers like account, order and tracking
 numbers either in the task or in `profile.md`.
