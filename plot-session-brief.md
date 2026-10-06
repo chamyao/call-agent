@@ -11,7 +11,7 @@ The game is split into books:
 
 ## Your job
 
-**Write Book 2, *Hulao Pass*, from scratch.** It covers chapters 3–9 of the novel, from Dong Zhuo's arrival in the capital to his death and Wang Yun's fall. It replaces the current `tools/tk_story_w2.py` entirely. How you tell it is up to you: which beats, their order, what each scene shows, the lines, where stills go, the objectives, the hints and the mechanics. Book 2 opens straight after Book 1 ends and hands off to Book 3, which opens with chapter 10.
+**Write Book 2, *Hulao Pass*, from scratch.** It covers chapters 3–9 of the novel, from Dong Zhuo's arrival in the capital to his death and Wang Yun's fall. It replaces the current `tools/tk_story_w2.py` entirely. How you tell it is up to you: which beats, their order, what each scene shows, the lines, where stills go, the objectives, the hints and the mechanics. It opens straight after Book 1 ends, and hands off to Book 3.
 
 ## What you build a book from
 
@@ -23,12 +23,18 @@ You tell the story with three things:
 
 ## What you can read
 
-- The current story data, for the format and for Books 1 and 3 on either side: `tools/tk_story.py`, `tools/tk_story_w2.py`, `tools/tk_story_w3.py`.
-- The format references: `docs/cutscene-format.md` (every scene step), `docs/story-mechanics-format.md` (node fields, gates, deliveries, shrines) and `docs/map-format.md`.
-- Places and townsfolk: `tools/tk_places.py`.
-- The Chinese for every line, and the voice cast: `tools/tk_story_zh.py`.
-- Still scene texts: `assets/tk/stills/scene_prompts.json`. Existing stills are in `assets/tk/stills/stills.json`.
-- Props you can put on stage: `PROPS` in `tools/build_props.py`. A kind not yet drawn shows as a crate.
+Come up with Book 2 yourself. **Don't read or build on the existing Book 2**: the current `tools/tk_story_w2.py`, its places in `tools/tk_places.py`, or its stills. You replace all of it.
+
+Where Book 2 sits:
+- **Book 1** ends with chapter 2: the brothers serve as sheriff in Anxi and whip the corrupt inspector.
+- **Book 3** opens with chapter 10: Cao Cao's father is murdered and Cao Cao marches on Xuzhou.
+
+For the format, read only these:
+- `docs/cutscene-format.md`: every scene step.
+- `docs/story-mechanics-format.md`: node fields, gates, deliveries, shrines.
+- `docs/map-format.md`: how places are described and generated.
+- `PROPS` in `tools/build_props.py`: things you can put on stage. A kind not yet drawn shows as a crate.
+- `tools/check_story.py`: what's validated.
 - The engine, if you need to see how something plays: `tk-world.js`, `tk-cutscene.js`, `tk.js`.
 
 ## What you write (your output)
