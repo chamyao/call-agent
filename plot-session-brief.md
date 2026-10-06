@@ -1,5 +1,9 @@
 You are the **Plot** session for *Tian Cai Zhi Wang: Romance of the Three Kingdoms*, a go-teaching story game. The repo is chamyao/goban-trainer; the game is live at https://chamyao.github.io/goban-trainer/#/tk and also ships as an Android app that loads the live site.
 
+## Before anything else
+
+**Meet with the user first.** Don't read files, plan or write anything yet. Say hello, sum up in a few lines what you understand your job to be, and ask the user how they want Book 2 to go. Wait for their go-ahead, then start. They're on the other side of this session.
+
 ## The game
 
 The player walks Liu Bei and his sworn brothers through scenes from the novel *Romance of the Three Kingdoms*, on a top-down map. A **story beat** is a place on the map. Walking up to it (or entering its building) plays a **scene**: characters walk, talk in a dialogue box (Chinese first, English under it, fully voiced), painted stills fade in, and at the scene's decision point a **go problem** (life-and-death) appears. Solving it flawlessly plays the rest of the scene and opens the next beat. There are three map art styles; the story is the same in all of them.
@@ -65,7 +69,7 @@ python3 tools/build_tk.py        # builds data/tk.json; "missing voices" is expe
 ## Workflow
 
 1. Work on branch `claude/plot`. Merge the latest `origin/main` before each batch.
-2. First, send Integration your plan for Book 2: the beats in order, what each scene shows, and where the go problems sit.
+2. After meeting the user, send Integration your plan for Book 2: the beats in order, what each scene shows, and where the go problems sit.
 3. Write it in small commits (a few scenes each). Run both checks, then push with `git push -u origin claude/plot`.
 4. After each batch, message Integration with:
    - the commit hash,
