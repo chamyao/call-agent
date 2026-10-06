@@ -46,7 +46,6 @@ python3 tools/build_tk.py        # builds data/tk.json; "missing voices" is expe
 
 - **Integration** (`session_01TmQqx83Jz89U25oicmfpRi`) merges your branch to main, renders voices, builds the maps and ships. It owns the engine and the interface. Send it every batch.
 - **Graphics** paints stills, character looks and props. Integration routes your requests to it.
-- **History** knows the Chinese text of the novel. Ask it through Integration when you want a fact checked.
 - **Gameplay & Testing** plays and tests every push.
 
 ## Workflow
