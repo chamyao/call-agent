@@ -13,6 +13,14 @@ The game is split into books:
 
 **Write Book 2, *Hulao Pass*, from scratch.** It covers chapters 3–9 of the novel, from Dong Zhuo's arrival in the capital to his death and Wang Yun's fall. It replaces the current `tools/tk_story_w2.py` entirely. How you tell it is up to you: which beats, their order, what each scene shows, the lines, where stills go, the objectives, the hints and the mechanics. Book 2 opens straight after Book 1 ends and hands off to Book 3, which opens with chapter 10.
 
+## What you build a book from
+
+You tell the story with three things:
+
+1. **Scenes with dialogue.** At each beat the cast is staged on the map: they walk, arrive in armies, give things, fight and fall, while the lines play in the dialogue box. Narration and speech are fully voiced, and the light can change (night, dusk, dawn). A beat can hold a go problem at its decision point, or a decision board with a dilemma caption.
+2. **Stills.** Painted full-screen images that fade in over the scene while the following lines play. You write a short scene text for each, and Graphics paints it. Use them for moments the map can't show.
+3. **Map design.** You decide the places a book visits and what each one holds. In `tools/tk_places.py`, each place has a kind (village, town, camp, pass, palace and so on), landmarks (the buildings and features where beats happen, and points to deliver things to), townsfolk with their lines, and rooms inside buildings. The map tools generate each map from that description, in all three art styles. How places link, and the order of beats across them, is the route the player walks.
+
 ## What you can read
 
 - The current story data, for the format and for Books 1 and 3 on either side: `tools/tk_story.py`, `tools/tk_story_w2.py`, `tools/tk_story_w3.py`.
