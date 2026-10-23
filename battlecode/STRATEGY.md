@@ -28,6 +28,30 @@ shared for free: the team is one strategy split across bodies, linked by an
 "Design a protocol, then a policy" is the same mistake as "train a policy,
 then fit it to fuel."
 
+### End-to-end plan (current, supersedes details below where they differ)
+
+- **Single output: one policy.** It covers the draft bot and every champion
+  (branching on champion type). The memory scheme is not a separate output:
+  writes are policy outputs, reads are policy inputs, and the meaning of the
+  bytes is whatever the shared program makes it.
+- **A policy is a program composed of building blocks**, e.g. `2x + y*z`
+  with blocks as variables. Its configuration = which blocks, how they are
+  combined (structure, conditions), and the constants. Blocks are compute
+  moves with a fuel price at a fixed setting, e.g. "A* depth 2" (goal and
+  scoring fixed; only tool + depth chosen), read/write shared bytes, read
+  remaining fuel, visible units, fight outcome, lookahead depth k, move,
+  attack/cast.
+- **No hard fuel constraint on the policy.** The simulator applies the real
+  rule (overrun = suspend, lose tempo); "read remaining fuel" is a block, so
+  wasteful policies just lose games.
+- **Generator: Deep Symbolic Regression style** (Petersen et al., ICLR 2021).
+  An offline network writes policies token by token; invalid tokens are masked
+  by the policy grammar; constants are tuned in an inner loop; reward = win
+  rate in our simulator; risk-seeking policy gradient (train on the top few %
+  of each batch). No model runs on the bots.
+- Open: one policy for all maps, or a policy conditioned on the map? Final
+  building-block list. Fuel price of each block (measure against `cambc`).
+
 ### Deployment shape (agreed so far)
 
 - No model runs on the bots. The network lives offline and outputs
