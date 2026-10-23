@@ -61,7 +61,10 @@ then fit it to fuel."
   only for what it uses. E.g. map reading = separate blocks: walls, holes,
   bushes, altars, spawn regions, camp groups, symmetry. All are readable from
   turn one (and in the draft); live camp state and enemies need vision.
-- Open: final building-block list; safety margin on fuel estimates.
+- **Training opponents**: start against the starter bot and other reasonable
+  hand-written bots, then self-play.
+- **Simulator must compute fuel correctly** (it is a rule of the game).
+- Iterate later: building-block set, policy grammar, fuel safety margin.
 
 ### Deployment shape (agreed so far)
 
