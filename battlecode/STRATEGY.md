@@ -20,6 +20,12 @@ running under a per-turn fuel budget, so the real game is the *expanded* game:
   trades directly against tempo (lost turns). Shared-memory writes are actions.
   The draft is the one big-compute, full-information action.
 
+Analogy: a knight moving two forward and one sideways is part of chess's
+action space; nobody treats the L-shape as an outside constraint on the policy.
+The fuel limit is the same kind of rule, just with more nuance. An action is a
+pair (x compute, x board action), and the budget is a legality rule on that
+pair, exactly like the knight's move pattern.
+
 Consequence: if we model the expanded game correctly and optimise in it, the
 optimum is *by construction* a program that runs within budget. There is no
 separate "train an unrestricted policy, then compress/distil it to fit fuel"
