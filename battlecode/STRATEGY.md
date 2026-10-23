@@ -59,6 +59,19 @@ then fit it to fuel."
   shared-memory claims, codebooks, draft map analysis. Start with search,
   pathfinding, fight calculator, belief tracker. The library is now the
   expressiveness ceiling.
+- **Why the compute space is manageable.** Raw space = every program within
+  fuel (unbounded). But a computation matters only through its outputs (board
+  actions, memory writes, whether it overruns). Programs with the same outputs
+  are the same move: hash-mining within budget == doing nothing (unused fuel
+  doesn't carry over); over budget == skipping a turn. So we choose a
+  *decision function* (info -> outputs); compute only decides which decision
+  functions are reachable. Per turn, fuel is a knapsack: spend it on
+  computations whose information changes decisions (rational metareasoning,
+  Russell & Wefald). Keep only the cheapest computation at each precision
+  level for each decision-relevant quantity. The block library is this
+  pruning. Grow it from evidence: run an unlimited-fuel version of the bot in our
+  simulator, find costly decision differences, add the block that closes the
+  gap.
 - Train encodings DIAL-style (Foerster et al. 2016): relax messages to
   continuous values through a noisy channel during training, discretise at
   execution. The learned encoding ships as lookup tables.
