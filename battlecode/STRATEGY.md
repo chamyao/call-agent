@@ -5,6 +5,29 @@ export via the "Agents.md" page -> GameRules.md).
 
 ## CORE PRINCIPLE (do not lose this)
 
+**Fuel is a rule, not a constraint.**
+
+> Everything our submission can affect is an action; everything that limits
+> it is a rule of the game. Nothing sits outside the game as a "constraint on
+> the policy."
+
+| Piece | Action | Rule |
+| --- | --- | --- |
+| Compute | spending fuel (instructions, SDK calls) | per-turn fuel budget, suspension on exhaustion |
+| Champion select | each pick | uniqueness, simultaneous reveal, random pick on failure |
+| Shared memory | each read/write | 8 bytes; turn order decides who sees a write when |
+| Draft memory | one-shot broadcast from the full-map draft | 1,024 bytes, read-only after draft |
+| Turn order | `set_priority` | team alternation, takes effect next round |
+| Other | yield, resign, language choice, even crashing | their engine semantics |
+
+Communication is not designed separately from play. What to write, how to
+encode it and when are part of the strategy, optimised jointly with
+everything else. All instances run the same program, so the codebook is
+shared for free: the team is one strategy split across bodies, linked by an
+8-byte channel plus implicit signals (positions, timing, observed behaviour).
+"Design a protocol, then a policy" is the same mistake as "train a policy,
+then fit it to fuel."
+
 **Compute is part of the action space.**
 
 The rules describe a game of moves. What we actually submit is a program
