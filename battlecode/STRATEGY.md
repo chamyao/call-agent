@@ -28,6 +28,23 @@ shared for free: the team is one strategy split across bodies, linked by an
 "Design a protocol, then a policy" is the same mistake as "train a policy,
 then fit it to fuel."
 
+### Deployment shape (agreed so far)
+
+- No model runs on the bots. The network lives offline and outputs
+  **configurations** (data, not code). The bot is a fixed interpreter of a
+  configuration.
+- Configuration expressiveness is a spectrum (pure numbers ... structure as
+  data). Decisions: weighted rules (weights change effective rule order,
+  so structure stays differentiable).
+- **Storing/reading must be configured, not hand-designed**, so the bot can
+  reach the optimal memory use. Bot = memory' = f(memory, obs),
+  action = g(memory, obs), with f set by the configuration: what to store, how
+  to encode it, when to write, what to read. Matters most for the 8 shared
+  bytes and the 1,024 draft bytes.
+- Train encodings DIAL-style (Foerster et al. 2016): relax messages to
+  continuous values through a noisy channel during training, discretise at
+  execution. The learned encoding ships as lookup tables.
+
 **Compute is part of the action space.**
 
 The rules describe a game of moves. What we actually submit is a program
