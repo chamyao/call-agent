@@ -1,5 +1,11 @@
 # Notes for Claude sessions working on this repo
 
+## Battlecode work
+
+For anything about Cambridge Battlecode, read `battlecode/STRATEGY.md` first.
+Its core principle (compute is part of the action space) is the basis of the
+whole strategy and must not be dropped.
+
 ## claude-bus: messages between Claude sessions over email
 
 Cham runs Claude both locally (on their Mac, which can SSH to db-east and
