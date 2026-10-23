@@ -41,6 +41,13 @@ then fit it to fuel."
   action = g(memory, obs), with f set by the configuration: what to store, how
   to encode it, when to write, what to read. Matters most for the 8 shared
   bytes and the 1,024 draft bytes.
+- **Compute is configured too.** Configuration = compute schedule + weights +
+  codebooks. The schedule is an ordered list of compute steps (features at a
+  chosen cost/precision tier, action scoring, lookahead), each with a cheap
+  gate and an early-stop margin; plus cache/recompute policy and deliberate
+  multi-turn computation. The fixed interpreter only walks the schedule and
+  must stay negligibly cheap: any real compute left in the fixed part is
+  compute outside the game.
 - Train encodings DIAL-style (Foerster et al. 2016): relax messages to
   continuous values through a noisy channel during training, discretise at
   execution. The learned encoding ships as lookup tables.
