@@ -49,8 +49,16 @@ then fit it to fuel."
   by the policy grammar; constants are tuned in an inner loop; reward = win
   rate in our simulator; risk-seeking policy gradient (train on the top few %
   of each batch). No model runs on the bots.
-- Open: one policy for all maps, or a policy conditioned on the map? Final
-  building-block list. Fuel price of each block (measure against `cambc`).
+- **One policy for all maps, adapting at runtime.** Tournament maps are
+  unseen, so no per-map policies offline. Terrain is not discovered: the
+  draft sees the whole map and champions can read walls/altars/camps via
+  `game_map`; only units are discovered through vision. Map-tailoring happens
+  inside the policy: branch on map blocks, and/or the draft picks a
+  sub-policy and writes the choice into draft memory.
+- **Fuel prices must be reliable**: each block's price is a function of
+  inputs (map size, unit count, depth), fitted by measuring against `cambc`.
+- Open: final building-block list (incl. map-reading granularity); safety
+  margin on fuel estimates.
 
 ### Deployment shape (agreed so far)
 
