@@ -57,8 +57,11 @@ then fit it to fuel."
   sub-policy and writes the choice into draft memory.
 - **Fuel prices must be reliable**: each block's price is a function of
   inputs (map size, unit count, depth), fitted by measuring against `cambc`.
-- Open: final building-block list (incl. map-reading granularity); safety
-  margin on fuel estimates.
+- **Blocks are split to the smallest manageable unit**, so the policy pays
+  only for what it uses. E.g. map reading = separate blocks: walls, holes,
+  bushes, altars, spawn regions, camp groups, symmetry. All are readable from
+  turn one (and in the draft); live camp state and enemies need vision.
+- Open: final building-block list; safety margin on fuel estimates.
 
 ### Deployment shape (agreed so far)
 
