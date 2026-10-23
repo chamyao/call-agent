@@ -48,6 +48,17 @@ then fit it to fuel."
   multi-turn computation. The fixed interpreter only walks the schedule and
   must stay negligibly cheap: any real compute left in the fixed part is
   compute outside the game.
+- **Building blocks**: the interpreter ships a library of parameterised
+  algorithms; the configuration chooses which run, when and with what
+  settings (each run is a priced step in the compute schedule). Candidates:
+  search/lookahead (depth, beam, move ordering, leaf eval, opponent model,
+  fuel cap, anytime; depth 0 = plain scoring), pathfinding (engine distance
+  fields or cheap estimates, weighted tile costs), fight calculator
+  (closed-form, deterministic), belief tracker (where unseen enemies can be),
+  timers (camp respawns, enemy cooldowns/deaths), task assignment via
+  shared-memory claims, codebooks, draft map analysis. Start with search,
+  pathfinding, fight calculator, belief tracker. The library is now the
+  expressiveness ceiling.
 - Train encodings DIAL-style (Foerster et al. 2016): relax messages to
   continuous values through a noisy channel during training, discretise at
   execution. The learned encoding ships as lookup tables.
